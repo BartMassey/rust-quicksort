@@ -7,14 +7,15 @@
 extern crate rand;
 
 /// Rearrange the elements of `slice`. Returns a "pivot"
-/// index into the slice.  On return, all elements at indices less than or
-/// equal to the pivot index will be less than or equal to
-/// the value at the pivot index, and all elements at
-/// indices greater than the pivot index will be greater
-/// than the value at the pivot index.
+/// index into the slice.  On return, all elements at
+/// indices less than or equal to the pivot index will be
+/// less than or equal to the value at the pivot index, and
+/// all elements at indices greater than or equal to the
+/// pivot index will be greater than or equal to the value
+/// at the pivot index.
 ///
-/// Partitioning is done using Hoare's Method 
-/// <http://en.wikipedia.org/wiki/Quicksort#Hoare_partition_scheme>.
+/// Partitioning is done using a custom variant of Hoare's method
+/// designed to put the pivot reasonably close to the middle.
 ///
 /// # Examples
 ///
@@ -30,40 +31,151 @@ extern crate rand;
 /// }
 /// ```
 pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
+    // Set up the length.
     let n = slice.len();
     if n < 2 {
         panic!("partition of short slice")
     }
 
-    // Median-of-three pivot.
-    let mut pivot = 0;
-    if slice[pivot] > slice[n / 2] {
-        pivot = n / 2;
+    // Things are easier if we order the first considered
+    // elements.
+    if slice[0] > slice[n-1] {
+        slice.swap(0, n-1)
     }
-    if slice[pivot] < slice[n - 1] {
-        pivot = n - 1;
-    }
-    // Put the pivot at the start for now.
-    slice.swap(pivot, 0);
 
-    // Pointers for lesser stack (grows up) and greater
-    // stack (grows down).
-    let mut lesser = 1;
-    let mut greater = n - 1;
+    // Set up the state.
+    let mut low = 0;
+    let mut high = n - 1;
+    let mut low_max = low;
+    let mut high_min = high;
+    let mut nlow = 1;
+    let mut nhigh = 1;
 
-    // Exchange as needed to ensure crossover.
+    // Partition the rest of the values.
     loop {
-        while lesser <= greater && slice[lesser] <= slice[0] {
-            lesser += 1
+        // Check invariants.
+        assert!(slice[low_max] <= slice[high_min]);
+        for i in 0..low+1 {
+            assert!(slice[i] <= slice[low_max])
         }
-        while slice[greater] > slice[0] {
-            greater -= 1
+        for i in high..n {
+            assert!(slice[i] >= slice[high_min])
         }
-        if lesser >= greater {
-            slice.swap(greater, 0);
-            return greater
+
+        // Get some target values to look at.
+        low += 1;
+        if low < high {
+            high -= 1;
         }
-        slice.swap(lesser, greater)
+
+        // If we're (almost) done, clean up and return.
+        if low >= high {
+            // Make sure nothing has been skipped.
+            assert!(low == high);
+
+            // Note that high and low are now equal:
+            // use both names for "clarity".
+
+            // Make sure the hypothetical last value
+            // isn't special.
+            if slice[low] < slice[low_max] {
+                slice.swap(low, low_max);
+            }
+            if slice[high] > slice[high_min] {
+                slice.swap(high, high_min);
+            }
+
+            // Now we are at the pivot. Let's make
+            // a third name for this index.
+            let pivot = low;
+
+            // Check the invariants one last time.
+            for (i, v) in slice.iter().enumerate() {
+                if i <= pivot {
+                    assert!(*v <= slice[pivot])
+                } else {
+                    assert!(*v >= slice[pivot])
+                }
+            }
+
+            // We're done.
+            return pivot
+        }
+
+        // Put both outstanding values in the low partition.
+        let mut place_low = move |slice: &mut[T]| {
+            // Move the high value to the low end if needed.
+            if low + 1 < high {
+                slice.swap(low + 1, high)
+            }
+            // Update low_max as needed.
+            if slice[low] > slice[low_max] {
+                low_max = low
+            }
+            if slice[low + 1] > slice[low_max] {
+                low_max = low + 1
+            }
+            // Adjust the indices to reflect what happpened.
+            low += 1;
+            high += 1;
+            nlow += 2
+        };
+
+        let mut place_high = move |slice: &mut [T]| {
+            // Move the low value to the high end if needed.
+            if low + 1 < high {
+                slice.swap(low, high - 1)
+            }
+            // Update high_min as needed.
+            if slice[high] < slice[high_min] {
+                high_min = high
+            }
+            if slice[high - 1] < slice[high] {
+                high_min = high - 1
+            }
+            // Adjust the indices to reflect what happpened.
+            low -= 1;
+            high -= 1;
+            nhigh += 2
+        };
+
+        // Ok, now re-establish the invariants. This is a
+        // long walk.
+
+        // Case: We are forced to place both values low.
+        if slice[low] < slice[low_max] && slice[low+1] < slice[low_max] {
+            place_low(slice);
+            continue
+        }
+
+        // Case: We are forced to place both values high.
+        if slice[low] > slice[high_min] && slice[high - 1] > slice[high_min] {
+            place_high(slice);
+            continue
+        }
+
+        // Case: We are out of balance high, so place both values low.
+        if nlow + 1 < nhigh {
+            place_low(slice);
+            continue
+        }
+
+        // Case: We are out of balance low, so place both values high.
+        if nlow + 1 < nhigh {
+            place_high(slice);
+            continue
+        }
+
+        // Case: we are in-balance and have the option, so split
+        // the values.
+
+        // Need the low value first.
+        if slice[low] > slice[high] {
+            slice.swap(low, high)
+        }
+        // Adjust the counts.
+        nlow += 1;
+        nhigh += 1
     }
 }
 
@@ -82,7 +194,7 @@ fn partition_random() {
         if i <= pivot {
             assert!(v <= pivot_val)
         } else {
-            assert!(v > pivot_val)
+            assert!(v >= pivot_val)
         }
     }
 }
