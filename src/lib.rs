@@ -74,7 +74,7 @@ fn partition_random() {
     let n = rand::thread_rng().gen_range(100, 1000);
     let mut a = Vec::with_capacity(n);
     for _ in 0..n {
-        a.push(rand::thread_rng().gen_range(0, 100))
+        a.push(rand::thread_rng().gen_range(-50, 50))
     }
     let pivot = partition(&mut a);
     let pivot_val = a[pivot];
