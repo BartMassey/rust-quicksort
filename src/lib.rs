@@ -37,7 +37,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
 
     // Exchange as needed to ensure crossover.
     loop {
-        while lesser <= greater && slice[lesser] < slice[0] {
+        while lesser <= greater && slice[lesser] <= slice[0] {
             lesser += 1
         }
         while lesser <= greater && slice[greater] > slice[0] {
@@ -62,7 +62,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
 /// for (i, v) in a.into_iter().enumerate() {
 ///     assert_eq!(i, *v)
 /// }
-///```
+/// ```
 pub fn quicksort<T: Ord>(slice: &mut [T]) {
     if slice.len() <= 1 {
         return;  // Nothing to sort.
