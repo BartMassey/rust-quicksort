@@ -40,9 +40,8 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
     if slice[pivot] < slice[n - 1] {
         pivot = n - 1;
     }
-    // Put the pivot in the middle.
-    let p = n / 2;
-    slice.swap(pivot, p);
+    // Put the pivot at the start for now.
+    slice.swap(pivot, 0);
 
     // Pointers for lesser stack (grows up) and greater
     // stack (grows down).
