@@ -56,7 +56,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
         while lesser <= greater && slice[lesser] <= slice[0] {
             lesser += 1
         }
-        while lesser <= greater && slice[greater] > slice[0] {
+        while slice[greater] > slice[0] {
             greater -= 1
         }
         if lesser >= greater {
