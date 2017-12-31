@@ -3,6 +3,9 @@
 
 //! Quicksort with Hoare partitioning.
 
+#[cfg(test)]
+extern crate rand;
+
 /// Rearrange the elements of `slice`. Returns a "pivot"
 /// index into the slice.  On return, all elements at indices less than or
 /// equal to the pivot index will be less than or equal to
@@ -64,6 +67,26 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
     }
 }
 
+
+#[test]
+fn partition_random() {
+    use rand::Rng;
+    let n = rand::thread_rng().gen_range(100, 1000);
+    let mut a = Vec::with_capacity(n);
+    for _ in 0..n {
+        a.push(rand::thread_rng().gen_range(0, 100))
+    }
+    let pivot = partition(&mut a);
+    let pivot_val = a[pivot];
+    for (i, v) in a.into_iter().enumerate() {
+        if i <= pivot {
+            assert!(v <= pivot_val)
+        } else {
+            assert!(v > pivot_val)
+        }
+    }
+}
+
 /// Sorts the elements of the slice using Quicksort with
 /// Hoare Partitioning.
 ///
@@ -97,9 +120,6 @@ fn quicksort_string() {
     quicksort(&mut a);
     assert_eq!(a.into_iter().collect::<String>(), "abcdefgh")
 }
-
-#[cfg(test)]
-extern crate rand;
 
 #[test]
 fn quicksort_random() {
