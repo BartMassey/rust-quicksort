@@ -12,6 +12,20 @@
 ///
 /// Partitioning is done using Hoare's Method 
 /// <http://en.wikipedia.org/wiki/Quicksort#Hoare_partition_scheme>.
+///
+/// # Examples
+///
+/// ```
+/// let mut a = [5,1,0,2,2,4,3,2];
+/// let pivot = quicksort::partition(&mut a);
+/// for (i, v) in a.into_iter().enumerate() {
+///     if i <= pivot {
+///         assert!(*v <= a[pivot])
+///     } else {
+///         assert!(*v > a[pivot])
+///     }
+/// }
+/// ```
 pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
     let n = slice.len();
     if n < 2 {
