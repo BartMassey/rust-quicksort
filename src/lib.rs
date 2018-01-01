@@ -102,8 +102,39 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             return pivot
         }
 
-        // Put both outstanding values in the low partition.
-        let mut place_low = move |slice: &mut[T]| {
+        // Ok, now re-establish the invariants. This is a
+        // long walk.
+
+        enum P {
+            SPLIT,
+            LOW,
+            HIGH,
+        }
+
+        let place;
+
+        if slice[low] < slice[low_max] && slice[high] < slice[low_max] {
+            // Case: We are forced to place both values low.
+            place = P::LOW
+        } else if slice[low] > slice[high_min] && slice[high] > slice[high_min] {
+            // Case: We are forced to place both values high.
+            place = P::HIGH
+        } else if nlow + 1 < nhigh {
+            // Case: We are out of balance high, so place both values low.
+            place = P::LOW
+        } else if nhigh + 1 < nlow {
+            // Case: We are out of balance low, so place both values high.
+            place = P::HIGH
+        } else {
+            // Case: we are in-balance and have the option, so split
+            // the values.
+            place = P::SPLIT
+        }
+
+        match place {
+        P::LOW => {
+            // Put both outstanding values in the low partition.
+
             // Move the high value to the low end if needed.
             if low + 1 < high {
                 slice.swap(low + 1, high)
@@ -118,10 +149,11 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             // Adjust the indices to reflect what happpened.
             low += 1;
             high += 1;
-            nlow += 2
-        };
+            nlow += 2;
+        },
+        P::HIGH => {
+            // Put both outstanding values in the high partition.
 
-        let mut place_high = move |slice: &mut [T]| {
             // Move the low value to the high end if needed.
             if low + 1 < high {
                 slice.swap(low, high - 1)
@@ -130,52 +162,31 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             if slice[high] < slice[high_min] {
                 high_min = high
             }
-            if slice[high - 1] < slice[high] {
+            if slice[high - 1] < slice[high_min] {
                 high_min = high - 1
             }
             // Adjust the indices to reflect what happpened.
             low -= 1;
             high -= 1;
-            nhigh += 2
-        };
-
-        // Ok, now re-establish the invariants. This is a
-        // long walk.
-
-        // Case: We are forced to place both values low.
-        if slice[low] < slice[low_max] && slice[low+1] < slice[low_max] {
-            place_low(slice);
+            nhigh += 2;
             continue
-        }
-
-        // Case: We are forced to place both values high.
-        if slice[low] > slice[high_min] && slice[high - 1] > slice[high_min] {
-            place_high(slice);
-            continue
-        }
-
-        // Case: We are out of balance high, so place both values low.
-        if nlow + 1 < nhigh {
-            place_low(slice);
-            continue
-        }
-
-        // Case: We are out of balance low, so place both values high.
-        if nlow + 1 < nhigh {
-            place_high(slice);
-            continue
-        }
-
-        // Case: we are in-balance and have the option, so split
-        // the values.
-
-        // Need the low value first.
-        if slice[low] > slice[high] {
-            slice.swap(low, high)
-        }
-        // Adjust the counts.
-        nlow += 1;
-        nhigh += 1
+        },
+        P::SPLIT => {
+            // Need the low value first.
+            if slice[low] > slice[high] {
+                slice.swap(low, high)
+            }
+            // Update low_max and high_min as needed.
+            if slice[low] > slice[low_max] {
+                low_max = low
+            }
+            if slice[high] < slice[high_min] {
+                high_min = high
+            }
+            // Adjust the counts.
+            nlow += 1;
+            nhigh += 1
+        }}
     }
 }
 
