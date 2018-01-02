@@ -63,36 +63,27 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
         }
 
         // If we're (almost) done, clean up and return.
-        if low + 2 >= high {
+        if low + 3 >= high {
             assert!(high > low);
-            match high - low {
-                2 => {
-                    if slice[low + 1] > slice[low + 2] {
-                        slice.swap(low + 1, low + 2)
+            let n = high - low;
+
+            for i in 1..n {
+                for j in (i + 1)..n {
+                    if slice[low + i] > slice[low + j] {
+                        slice.swap(low + i, low + j)
                     }
-                    if slice[low + 1] <= slice[high_min] {
-                        low += 1;
-                        if slice[low] > slice[low_max] {
-                            low_max = low
-                        }
+                }
+            }
+
+            for _ in 1..n {
+                if slice[low + 1] <= slice[high_min] {
+                    low += 1;
+                    if slice[low] > slice[low_max] {
+                        low_max = low
                     }
-                    if slice[low + 1] <= slice[high_min] {
-                        low += 1;
-                        if slice[low] > slice[low_max] {
-                            low_max = low
-                        }
-                    }
-                },
-                1 => {
-                    if slice[low + 1] <= slice[high_min] {
-                        low += 1;
-                        if slice[low] > slice[low_max] {
-                            low_max = low
-                        }
-                    }
-                },
-                0 => (),
-                n => panic!("internal error: bad gap {}", n)
+                } else {
+                    break
+                }
             }
 
             let pivot = low;
@@ -238,8 +229,8 @@ fn partition_random() {
     }
 }
 
-/// Sorts the elements of the slice using Quicksort with
-/// Hoare Partitioning.
+/// Sorts the elements of the slice using Quicksort via
+/// `quicksort::partition()`.
 ///
 /// # Examples
 ///
@@ -275,13 +266,16 @@ fn quicksort_string() {
 #[test]
 fn quicksort_random() {
     use rand::Rng;
-    let n = rand::thread_rng().gen_range(100, 1000);
+    let n = rand::thread_rng().gen_range(20, 51);
     let mut a = Vec::with_capacity(n);
     for _ in 0..n {
-        a.push(rand::thread_rng().gen_range(0, 1000))
+        a.push(rand::thread_rng().gen_range(0, 51))
     }
     quicksort(&mut a);
     for i in 1..n {
-        assert!(a[i-1] <= a[i])
+        if a[i-1] > a[i] {
+            panic!("quicksort fails: a={:?} i={} a[i-1]={} a[i]={}",
+                   a, i, a[i-1], a[i])
+        }
     }
 }
