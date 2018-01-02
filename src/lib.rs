@@ -1,7 +1,11 @@
-// Copyright © 2017 Bart Massey
+// Copyright © 2018 Bart Massey
+// [This program is licensed under the "MIT License"]
+// Please see the file LICENSE in the source
+// distribution of this software for license terms.
+
 // From O'Reilly Rust book, but completed.
 
-//! Quicksort with Hoare partitioning.
+//! Quicksort
 
 #[cfg(test)]
 extern crate rand;
@@ -55,18 +59,25 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
     loop {
         // Check invariants.
         assert!(slice[low_max] <= slice[high_min]);
-        for i in 0..low+1 {
-            assert!(slice[i] <= slice[low_max])
-        }
-        for i in high..n {
-            assert!(slice[i] >= slice[high_min])
+        #[cfg(test)] {
+            for i in 0..low+1 {
+                assert!(slice[i] <= slice[low_max])
+            }
+            for i in high..n {
+                assert!(slice[i] >= slice[high_min])
+            }
         }
 
         // If we're (almost) done, clean up and return.
         if low + 3 >= high {
+            // Would not have room for placing both values
+            // high or low. Calculate remaining gap.
             assert!(high > low);
             let n = high - low;
 
+            // Do a selection sort to put gap values in
+            // order, because it makes things easier at
+            // little cost.
             for i in 1..n {
                 for j in (i + 1)..n {
                     if slice[low + i] > slice[low + j] {
@@ -75,6 +86,8 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
                 }
             }
 
+            // Put all the values that are safe to include
+            // into the low partition into it.
             for _ in 1..n {
                 if slice[low + 1] <= slice[high_min] {
                     low += 1;
@@ -86,19 +99,24 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
                 }
             }
 
+            // Call low pivot for clarity.
             let pivot = low;
 
+            // Guarantee that the pivot is the largest low
+            // value, to conform to standard Quicksort.
             if low_max != pivot {
                 slice.swap(low_max, pivot)
             }
 
             // Check the invariants one last time.
             assert!(slice[low_max] <= slice[high_min]);
-            for (i, v) in slice.iter().enumerate() {
-                if i <= pivot {
-                    assert!(*v <= slice[pivot])
-                } else {
-                    assert!(*v >= slice[pivot])
+            #[cfg(test)] {
+                for (i, v) in slice.iter().enumerate() {
+                    if i <= pivot {
+                        assert!(*v <= slice[pivot])
+                    } else {
+                        assert!(*v >= slice[pivot])
+                    }
                 }
             }
 
@@ -115,12 +133,14 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
         // Ok, now re-establish the invariants. This is a
         // long walk.
 
+        // Possible placements.
         enum P {
             SPLIT,
             LOW,
             HIGH,
         }
 
+        // Choose a placement.
         let place;
 
         if slice[low] < slice[low_max] &&
