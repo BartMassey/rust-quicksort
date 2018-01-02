@@ -36,24 +36,22 @@ extern crate rand;
 /// ```
 pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
     // Set up the length.
-    let n = slice.len();
-    if n < 2 {
+    let nslice = slice.len();
+    if nslice < 2 {
         panic!("partition of short slice")
     }
 
     // Things are easier if we order the first considered
     // elements.
-    if slice[0] > slice[n-1] {
-        slice.swap(0, n-1)
+    if slice[0] > slice[nslice-1] {
+        slice.swap(0, nslice-1)
     }
 
     // Set up the state.
     let mut low = 0;
-    let mut high = n - 1;
+    let mut high = nslice - 1;
     let mut low_max = low;
     let mut high_min = high;
-    let mut nlow = 1;
-    let mut nhigh = 1;
 
     // Partition the rest of the values.
     loop {
@@ -63,7 +61,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             for i in 0..low+1 {
                 assert!(slice[i] <= slice[low_max])
             }
-            for i in high..n {
+            for i in high..nslice {
                 assert!(slice[i] >= slice[high_min])
             }
         }
@@ -73,13 +71,13 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             // Would not have room for placing both values
             // high or low. Calculate remaining gap.
             assert!(high > low);
-            let n = high - low;
+            let ngap = high - low;
 
             // Do a selection sort to put gap values in
             // order, because it makes things easier at
             // little cost.
-            for i in 1..n {
-                for j in (i + 1)..n {
+            for i in 1..ngap {
+                for j in (i + 1)..ngap {
                     if slice[low + i] > slice[low + j] {
                         slice.swap(low + i, low + j)
                     }
@@ -88,7 +86,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
 
             // Put all the values that are safe to include
             // into the low partition into it.
-            for _ in 1..n {
+            for _ in 1..ngap {
                 if slice[low + 1] <= slice[high_min] {
                     low += 1;
                     if slice[low] > slice[low_max] {
@@ -126,9 +124,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
 
         // Get some target values to look at.
         low += 1;
-        if low < high {
-            high -= 1;
-        }
+        high -= 1;
 
         // Ok, now re-establish the invariants. This is a
         // long walk.
@@ -143,6 +139,11 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
         // Choose a placement.
         let place;
 
+        // Number of elements in each partition.
+        let nlow = low + 1;
+        let nhigh = nslice - high;
+
+        // Figure out where to place the next two values.
         if slice[low] < slice[low_max] &&
         slice[high] < slice[low_max] {
             // Case: We are forced to place both values low.
@@ -169,63 +170,64 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             place = P::SPLIT
         }
 
+        // Place two values as prescribed.
         match place {
-        P::LOW => {
-            // Put both outstanding values in the low partition.
+            P::LOW => {
+                // Put both values in the low partition.
 
-            // Move the high value to the low end.
-            assert!(low + 1 < high);
-            slice.swap(low + 1, high);
+                // Move the high value to the low end.
+                assert!(low + 1 < high);
+                slice.swap(low + 1, high);
 
-            // Update low_max as needed.
-            if slice[low] > slice[low_max] {
-                low_max = low
-            }
-            if slice[low + 1] > slice[low_max] {
-                low_max = low + 1
-            }
+                // Update low_max as needed.
+                if slice[low] > slice[low_max] {
+                    low_max = low
+                }
+                if slice[low + 1] > slice[low_max] {
+                    low_max = low + 1
+                }
 
-            // Adjust the indices to reflect what happpened.
-            low += 1;
-            high += 1;
-            nlow += 2;
-        },
-        P::HIGH => {
-            // Put both outstanding values in the high partition.
+                // Adjust the indices to reflect what
+                // happpened.
+                low += 1;
+                high += 1;
+            },
+            P::HIGH => {
+                // Put both values in the high partition.
 
-            // Move the low value to the high end.
-            assert!(low + 1 < high);
-            slice.swap(low, high - 1);
+                // Move the low value to the high end.
+                assert!(low + 1 < high);
+                slice.swap(low, high - 1);
 
-            // Update high_min as needed.
-            if slice[high] < slice[high_min] {
-                high_min = high
-            }
-            if slice[high - 1] < slice[high_min] {
-                high_min = high - 1
-            }
+                // Update high_min as needed.
+                if slice[high] < slice[high_min] {
+                    high_min = high
+                }
+                if slice[high - 1] < slice[high_min] {
+                    high_min = high - 1
+                }
 
-            // Adjust the indices to reflect what happpened.
-            low -= 1;
-            high -= 1;
-            nhigh += 2;
-        },
-        P::SPLIT => {
-            // Need the low value first.
-            if slice[low] > slice[high] {
-                slice.swap(low, high)
+                // Adjust the indices to reflect what
+                // happpened.
+                low -= 1;
+                high -= 1;
+            },
+            P::SPLIT => {
+                // Place one value in each partition.
+
+                // Need the low value first.
+                if slice[low] > slice[high] {
+                    slice.swap(low, high)
+                }
+                // Update low_max and high_min as needed.
+                if slice[low] > slice[low_max] {
+                    low_max = low
+                }
+                if slice[high] < slice[high_min] {
+                    high_min = high
+                }
             }
-            // Update low_max and high_min as needed.
-            if slice[low] > slice[low_max] {
-                low_max = low
-            }
-            if slice[high] < slice[high_min] {
-                high_min = high
-            }
-            // Adjust the counts.
-            nlow += 1;
-            nhigh += 1
-        }}
+        }
     }
 }
 
