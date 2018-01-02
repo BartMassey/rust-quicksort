@@ -62,34 +62,47 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             assert!(slice[i] >= slice[high_min])
         }
 
-        // Get some target values to look at.
-        low += 1;
-        if low < high {
-            high -= 1;
-        }
-
         // If we're (almost) done, clean up and return.
-        if low >= high {
-            // Make sure nothing has been skipped.
-            assert!(low == high);
-
-            // Note that high and low are now equal:
-            // use both names for "clarity".
-
-            // Make sure the hypothetical last value
-            // isn't special.
-            if slice[low] < slice[low_max] {
-                slice.swap(low, low_max);
+        if low + 2 >= high {
+            assert!(high > low);
+            match high - low {
+                2 => {
+                    if slice[low + 1] > slice[low + 2] {
+                        slice.swap(low + 1, low + 2)
+                    }
+                    if slice[low + 1] <= slice[high_min] {
+                        low += 1;
+                        if slice[low] > slice[low_max] {
+                            low_max = low
+                        }
+                    }
+                    if slice[low + 1] <= slice[high_min] {
+                        low += 1;
+                        if slice[low] > slice[low_max] {
+                            low_max = low
+                        }
+                    }
+                },
+                1 => {
+                    if slice[low + 1] <= slice[high_min] {
+                        low += 1;
+                        if slice[low] > slice[low_max] {
+                            low_max = low
+                        }
+                    }
+                },
+                0 => (),
+                n => panic!("internal error: bad gap {}", n)
             }
-            if slice[high] > slice[high_min] {
-                slice.swap(high, high_min);
-            }
 
-            // Now we are at the pivot. Let's make
-            // a third name for this index.
             let pivot = low;
 
+            if low_max != pivot {
+                slice.swap(low_max, pivot)
+            }
+
             // Check the invariants one last time.
+            assert!(slice[low_max] <= slice[high_min]);
             for (i, v) in slice.iter().enumerate() {
                 if i <= pivot {
                     assert!(*v <= slice[pivot])
@@ -100,6 +113,12 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
 
             // We're done.
             return pivot
+        }
+
+        // Get some target values to look at.
+        low += 1;
+        if low < high {
+            high -= 1;
         }
 
         // Ok, now re-establish the invariants. This is a
@@ -113,20 +132,28 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
 
         let place;
 
-        if slice[low] < slice[low_max] && slice[high] < slice[low_max] {
+        if slice[low] < slice[low_max] &&
+        slice[high] < slice[low_max] {
             // Case: We are forced to place both values low.
             place = P::LOW
-        } else if slice[low] > slice[high_min] && slice[high] > slice[high_min] {
+        } else if slice[low] > slice[high_min] &&
+        slice[high] > slice[high_min] {
             // Case: We are forced to place both values high.
             place = P::HIGH
-        } else if nlow + 1 < nhigh {
-            // Case: We are out of balance high, so place both values low.
+        } else if nlow + 1 < nhigh &&
+        slice[low] <= slice[high_min] &&
+        slice[high] <= slice[high_min] {
+            // Case: We are out of balance high, and can
+            // place both values low.
             place = P::LOW
-        } else if nhigh + 1 < nlow {
-            // Case: We are out of balance low, so place both values high.
+        } else if nhigh + 1 < nlow &&
+        slice[low] >= slice[low_max] &&
+        slice[high] >= slice[low_max] {
+            // Case: We are out of balance low, and can
+            // place both values high.
             place = P::HIGH
         } else {
-            // Case: we are in-balance and have the option, so split
+            // Case: we are in-balance, or forced to, so split
             // the values.
             place = P::SPLIT
         }
@@ -135,10 +162,10 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
         P::LOW => {
             // Put both outstanding values in the low partition.
 
-            // Move the high value to the low end if needed.
-            if low + 1 < high {
-                slice.swap(low + 1, high)
-            }
+            // Move the high value to the low end.
+            assert!(low + 1 < high);
+            slice.swap(low + 1, high);
+
             // Update low_max as needed.
             if slice[low] > slice[low_max] {
                 low_max = low
@@ -146,6 +173,7 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             if slice[low + 1] > slice[low_max] {
                 low_max = low + 1
             }
+
             // Adjust the indices to reflect what happpened.
             low += 1;
             high += 1;
@@ -154,10 +182,10 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
         P::HIGH => {
             // Put both outstanding values in the high partition.
 
-            // Move the low value to the high end if needed.
-            if low + 1 < high {
-                slice.swap(low, high - 1)
-            }
+            // Move the low value to the high end.
+            assert!(low + 1 < high);
+            slice.swap(low, high - 1);
+
             // Update high_min as needed.
             if slice[high] < slice[high_min] {
                 high_min = high
@@ -165,11 +193,11 @@ pub fn partition<T: Ord>(slice: &mut [T]) -> usize {
             if slice[high - 1] < slice[high_min] {
                 high_min = high - 1
             }
+
             // Adjust the indices to reflect what happpened.
             low -= 1;
             high -= 1;
             nhigh += 2;
-            continue
         },
         P::SPLIT => {
             // Need the low value first.
